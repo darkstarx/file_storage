@@ -49,21 +49,21 @@ abstract interface class FileStorage
   Future<Object?> loadJson(final String fileName);
 
   /// Saves the [data] to the file [fileName].
-  Future<bool> saveData(final String fileName, final List<int> data);
+  Future<void> saveData(final String fileName, final List<int> data);
 
   /// Saves the [text] to the file [fileName].
-  Future<bool> saveText(final String fileName, final String text);
+  Future<void> saveText(final String fileName, final String text);
 
   /// Saves the [jsonValue] to the file [fileName].
   ///
   /// If [toEncodable] is provided, it's used during serialization the
   /// [jsonValue].
-  Future<bool> saveJson(final String fileName, final dynamic jsonValue, {
+  Future<void> saveJson(final String fileName, final dynamic jsonValue, {
     Object? Function(dynamic)? toEncodable,
   });
 
   /// Saves the [stream] to the file [fileName].
-  Future<bool> saveStream(final String fileName, final Stream<List<int>> stream);
+  Future<void> saveStream(final String fileName, final Stream<List<int>> stream);
 
   /// Removes the file with the name [fileName] if exists.
   Future<void> removeFile(final String fileName);

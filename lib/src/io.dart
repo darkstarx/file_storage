@@ -112,23 +112,21 @@ class FileStorageIO implements FileStorage
   }
 
   @override
-  Future<bool> saveData(final String fileName, final List<int> data) async
+  Future<void> saveData(final String fileName, final List<int> data) async
   {
     final file = File(fileName);
     await file.writeAsBytes(data, flush: true);
-    return true;
   }
 
   @override
-  Future<bool> saveText(final String fileName, final String text) async
+  Future<void> saveText(final String fileName, final String text) async
   {
     final file = File(fileName);
     await file.writeAsString(text, flush: true);
-    return true;
   }
 
   @override
-  Future<bool> saveJson(final String fileName, final dynamic jsonValue, {
+  Future<void> saveJson(final String fileName, final dynamic jsonValue, {
     Object? Function(dynamic)? toEncodable,
   }) async
   {
@@ -137,32 +135,22 @@ class FileStorageIO implements FileStorage
     final stream = Stream.value(jsonValue)
       .transform(JsonEncoder(toEncodable))
       .transform(const Utf8Encoder());
-    try {
-      await sink.addStream(stream);
-    } finally {
-      await sink.close();
-    }
-    return true;
+    await sink.addStream(stream);
+    await sink.flush();
+    await sink.close();
   }
 
   @override
-  Future<bool> saveStream(
+  Future<void> saveStream(
     final String fileName,
     final Stream<List<int>> stream,
   ) async
   {
     final file = File(fileName);
     final sink = file.openWrite();
-    try {
-      await sink.addStream(stream);
-      await sink.flush();
-      await sink.close();
-      return true;
-    } catch (_) {
-      // The file closes automatically on stream error, and trying to close the
-      // sink in this case will lead to `FileSystemException: File closed`.
-      return false;
-    }
+    await sink.addStream(stream);
+    await sink.flush();
+    await sink.close();
   }
 
   @override

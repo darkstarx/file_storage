@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:idb_shim/idb.dart';
 import 'package:idb_shim/idb_browser.dart';
 
 import 'platformed.dart';
@@ -56,7 +55,6 @@ class FileStorageWeb implements FileStorage
   Future<bool> fileExists(final String fileName) async
   {
     final db = await _getDatabase();
-    if (db == null) return false;
     final transaction = db.transaction([ storeName ], idbModeReadOnly);
     final store = transaction.objectStore(storeName);
     final count = await store.count(fileName);
@@ -67,7 +65,6 @@ class FileStorageWeb implements FileStorage
   Future<List<int>?> loadData(final String fileName) async
   {
     final db = await _getDatabase();
-    if (db == null) return null;
     final transaction = db.transaction([ storeName ], idbModeReadOnly);
     final store = transaction.objectStore(storeName);
     final data = await store.getObject(fileName);
@@ -97,26 +94,24 @@ class FileStorageWeb implements FileStorage
   }
 
   @override
-  Future<bool> saveData(final String fileName, final List<int> data) async
+  Future<void> saveData(final String fileName, final List<int> data) async
   {
     final db = await _getDatabase();
-    if (db == null) return false;
     final transaction = db.transaction([ storeName ], idbModeReadWrite);
     final store = transaction.objectStore(storeName);
     await store.put(data, fileName);
-    return true;
   }
 
   @override
-  Future<bool> saveText(final String fileName, final String text)
+  Future<void> saveText(final String fileName, final String text)
   {
     return saveData(fileName, utf8.encode(text));
   }
 
   @override
-  Future<bool> saveJson(final String fileName, final dynamic jsonValue, {
+  Future<void> saveJson(final String fileName, final dynamic jsonValue, {
     Object? Function(dynamic)? toEncodable,
-  }) async
+  })
   {
     final stream = Stream.value(jsonValue)
       .transform(JsonEncoder(toEncodable))
@@ -125,23 +120,22 @@ class FileStorageWeb implements FileStorage
   }
 
   @override
-  Future<void> removeFile(final String fileName) async
-  {
-    final db = await _getDatabase();
-    if (db == null) return;
-    final transaction = db.transaction([ storeName ], idbModeReadWrite);
-    final store = transaction.objectStore(storeName);
-    await store.delete(fileName);
-  }
-
-  @override
-  Future<bool> saveStream(
+  Future<void> saveStream(
     final String fileName,
     final Stream<List<int>> stream,
   ) async
   {
     final data = (await stream.toList()).expand((e) => e).toList();
-    return await saveData(fileName, data);
+    await saveData(fileName, data);
+  }
+
+  @override
+  Future<void> removeFile(final String fileName) async
+  {
+    final db = await _getDatabase();
+    final transaction = db.transaction([ storeName ], idbModeReadWrite);
+    final store = transaction.objectStore(storeName);
+    await store.delete(fileName);
   }
 
   Future<String> _buildPath(final String basePath, {
@@ -159,18 +153,14 @@ class FileStorageWeb implements FileStorage
     return fullPath;
   }
 
-  Future<Database?> _getDatabase() async
+  Future<Database> _getDatabase() async
   {
-    if (_database == null) {
-      final idbFactory = getIdbFactory();
-      if (idbFactory == null) return null;
-      _database = await idbFactory.open('filestorage.db',
-        version: 1,
-        onUpgradeNeeded: _onUpgradeNeeded,
-        onBlocked: _onBlocked,
-      );
-    }
-    return _database;
+    _database ??= await idbFactoryNative.open('filestorage.db',
+      version: 1,
+      onUpgradeNeeded: _onUpgradeNeeded,
+      onBlocked: _onBlocked,
+    );
+    return _database!;
   }
 
   FutureOr<void> _onUpgradeNeeded(final VersionChangeEvent event)
